@@ -1,10 +1,24 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Question } from "../types";
 
+// Ensure process is defined for TypeScript context, as Vite replaces process.env.API_KEY during build
+declare const process: { env: { API_KEY: string } };
+
 export const generateQuestionsWithAI = async (topic: string, count: number = 5): Promise<Question[]> => {
   try {
-    // Initialize the client with the API key from the environment variable as per guidelines
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Retrieve the API key exclusively from process.env.API_KEY as per guidelines
+    // Vite config replaces this string with the actual key value during build
+    const apiKey = process.env.API_KEY;
+
+    // Diagnostic logging (safe, only logs presence)
+    console.log(`[Gemini Service] Initializing with key present: ${!!apiKey}`);
+
+    if (!apiKey) {
+      throw new Error("مفتاح API غير موجود. يرجى التأكد من إعداد API_KEY في إعدادات البيئة.");
+    }
+
+    // Lazy initialization: Create the client only when the function is called
+    const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `
       Create ${count} multiple choice questions about "${topic}" in Arabic.
