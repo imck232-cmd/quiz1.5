@@ -11,6 +11,37 @@ export default defineConfig(({ mode }) => {
     define: {
       // Safely expose API_KEY to the client-side code
       'process.env.API_KEY': JSON.stringify(env.API_KEY)
+    },
+    build: {
+      // Increase the warning limit slightly to avoid false positives on medium-sized chunks
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          // Manually split chunks to improve performance and solve the "chunk larger than 500kB" warning
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              // Split Google GenAI into its own chunk (it's large)
+              if (id.includes('@google/genai')) {
+                return 'genai';
+              }
+              // Split Recharts into its own chunk
+              if (id.includes('recharts')) {
+                return 'recharts';
+              }
+              // Split React core into its own chunk
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'vendor';
+              }
+              // Split Lucide icons
+              if (id.includes('lucide-react')) {
+                return 'icons';
+              }
+              // All other dependencies go to a general dependencies chunk
+              return 'deps';
+            }
+          }
+        }
+      }
     }
   };
 });
