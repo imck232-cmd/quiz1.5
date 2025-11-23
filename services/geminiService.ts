@@ -63,7 +63,9 @@ export const generateQuestionsWithAI = async (topic: string, count: number = 5):
 
     let rawQuestions;
     try {
-      rawQuestions = JSON.parse(responseText);
+      // Clean up markdown code blocks if present (e.g., ```json ... ```)
+      const cleanedText = responseText.replace(/```json\n?|```/g, '').trim();
+      rawQuestions = JSON.parse(cleanedText);
     } catch (e) {
       console.error("Failed to parse JSON:", responseText);
       throw new Error("فشل في معالجة استجابة الذكاء الاصطناعي.");
