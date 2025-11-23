@@ -1,29 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Question } from "../types";
 
-// Remove top-level initialization to ensure app stability even if API Key is missing on load
-// const apiKey = process.env.API_KEY as string;
-// const genAI = new GoogleGenAI({ apiKey });
-
 export const generateQuestionsWithAI = async (topic: string, count: number = 5): Promise<Question[]> => {
   try {
-    // Get the key at runtime when the function is called
-    const apiKey = process.env.API_KEY as string;
-
-    if (!apiKey) {
-      throw new Error("API Key is missing. Please configure the environment variable.");
-    }
-
-    // Initialize the client only when needed (Lazy Initialization)
-    const genAI = new GoogleGenAI({ apiKey });
+    // Initialize the client with the API key from the environment variable as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const prompt = `
       Create ${count} multiple choice questions about "${topic}" in Arabic.
       Focus on educational value suitable for high school students.
-      Return ONLY the raw JSON.
     `;
 
-    const response = await genAI.models.generateContent({
+    const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
@@ -33,34 +21,46 @@ export const generateQuestionsWithAI = async (topic: string, count: number = 5):
           items: {
             type: Type.OBJECT,
             properties: {
-              text: { type: Type.STRING, description: "The question text in Arabic" },
+              text: { type: Type.STRING },
+              explanation: { type: Type.STRING },
               choices: {
                 type: Type.ARRAY,
                 items: {
                   type: Type.OBJECT,
                   properties: {
-                    text: { type: Type.STRING, description: "The choice text in Arabic" },
-                    isCorrect: { type: Type.BOOLEAN, description: "Whether this choice is correct" }
+                    text: { type: Type.STRING },
+                    isCorrect: { type: Type.BOOLEAN }
                   },
                   required: ["text", "isCorrect"]
                 }
-              },
-              explanation: { type: Type.STRING, description: "Brief explanation of the correct answer in Arabic" }
+              }
             },
-            required: ["text", "choices", "explanation"]
+            required: ["text", "choices"]
           }
         }
       }
     });
 
-    const rawQuestions = JSON.parse(response.text || "[]");
+    const responseText = response.text;
+
+    if (!responseText) {
+      throw new Error("No content generated");
+    }
+
+    let rawQuestions;
+    try {
+      rawQuestions = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Failed to parse JSON:", responseText);
+      throw new Error("فشل في معالجة استجابة الذكاء الاصطناعي.");
+    }
     
     // Map to our internal structure with IDs
     return rawQuestions.map((q: any, index: number) => ({
       id: `ai-q-${Date.now()}-${index}`,
       text: q.text,
       type: 'multiple_choice',
-      explanation: q.explanation,
+      explanation: q.explanation || '',
       choices: q.choices.map((c: any, cIdx: number) => ({
         id: `c-${index}-${cIdx}`,
         text: c.text,
