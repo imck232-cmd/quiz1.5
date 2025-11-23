@@ -1,28 +1,46 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Question } from "../types";
+import { Question, QuestionType } from "../types";
 
-// Ensure process is defined for TypeScript context, as Vite replaces process.env.API_KEY during build
-declare const process: { env: { API_KEY: string } };
-
-export const generateQuestionsWithAI = async (topic: string, count: number = 5): Promise<Question[]> => {
+export const generateQuestionsWithAI = async (
+  content: string, 
+  count: number = 5,
+  selectedTypes: QuestionType[] = ['اختيار من متعدد']
+): Promise<Question[]> => {
   try {
-    // Retrieve the API key exclusively from process.env.API_KEY as per guidelines
-    // Vite config replaces this string with the actual key value during build
-    const apiKey = process.env.API_KEY;
+    // Initialize GoogleGenAI with process.env.API_KEY as per strict guidelines.
+    // We assume the environment variable is properly configured and available.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    // Diagnostic logging (safe, only logs presence)
-    console.log(`[Gemini Service] Initializing with key present: ${!!apiKey}`);
-
-    if (!apiKey) {
-      throw new Error("مفتاح API غير موجود. يرجى التأكد من إعداد API_KEY في إعدادات البيئة.");
-    }
-
-    // Lazy initialization: Create the client only when the function is called
-    const ai = new GoogleGenAI({ apiKey });
+    // تحويل أنواع الأسئلة إلى نص
+    const typesStr = selectedTypes.join(", ");
 
     const prompt = `
-      Create ${count} multiple choice questions about "${topic}" in Arabic.
-      Focus on educational value suitable for high school students.
+      You are an expert educational consultant. Analyze the following content/context and generate ${count} questions in Arabic.
+      
+      The requested question types are: ${typesStr}.
+      
+      Content to analyze:
+      "${content}"
+
+      Output requirements:
+      1. Return ONLY valid JSON.
+      2. Strictly follow this schema for each question.
+      3. For 'صح / خطأ' (True/False), provide choices as "صح" and "خطأ".
+      4. For 'ملء الفراغ' (Fill in blank), put the missing word in brackets in the explanation, and provide choices if applicable or just correct text.
+      5. For other types, adapt reasonably to a choice-based structure or text answer.
+
+      Schema:
+      [
+        {
+          "text": "Question text here",
+          "type": "One of the requested types",
+          "explanation": "Explanation here",
+          "choices": [
+            { "text": "Choice 1", "isCorrect": boolean },
+            { "text": "Choice 2", "isCorrect": boolean }
+          ]
+        }
+      ]
     `;
 
     const response = await ai.models.generateContent({
@@ -30,28 +48,6 @@ export const generateQuestionsWithAI = async (topic: string, count: number = 5):
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              text: { type: Type.STRING },
-              explanation: { type: Type.STRING },
-              choices: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    text: { type: Type.STRING },
-                    isCorrect: { type: Type.BOOLEAN }
-                  },
-                  required: ["text", "isCorrect"]
-                }
-              }
-            },
-            required: ["text", "choices"]
-          }
-        }
       }
     });
 
@@ -63,7 +59,6 @@ export const generateQuestionsWithAI = async (topic: string, count: number = 5):
 
     let rawQuestions;
     try {
-      // Clean up markdown code blocks if present (e.g., ```json ... ```)
       const cleanedText = responseText.replace(/```json\n?|```/g, '').trim();
       rawQuestions = JSON.parse(cleanedText);
     } catch (e) {
@@ -71,22 +66,20 @@ export const generateQuestionsWithAI = async (topic: string, count: number = 5):
       throw new Error("فشل في معالجة استجابة الذكاء الاصطناعي.");
     }
     
-    // Map to our internal structure with IDs
     return rawQuestions.map((q: any, index: number) => ({
       id: `ai-q-${Date.now()}-${index}`,
       text: q.text,
-      type: 'multiple_choice',
+      type: q.type || 'اختيار من متعدد', // Fallback type
       explanation: q.explanation || '',
-      choices: q.choices.map((c: any, cIdx: number) => ({
+      choices: q.choices ? q.choices.map((c: any, cIdx: number) => ({
         id: `c-${index}-${cIdx}`,
         text: c.text,
         isCorrect: c.isCorrect
-      }))
+      })) : []
     }));
 
   } catch (error) {
     console.error("Gemini AI Error:", error);
-    // Provide a user-friendly error message
     throw new Error("فشل في توليد الأسئلة. يرجى التأكد من مفتاح API والمحاولة مرة أخرى.");
   }
 };

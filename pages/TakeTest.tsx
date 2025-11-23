@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Test, TestSession } from '../types';
-import { Timer, CheckCircle } from 'lucide-react';
+import { Timer, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface TakeTestProps {
   test: Test;
@@ -39,6 +39,8 @@ export const TakeTest: React.FC<TakeTestProps> = ({ test, studentId, onSubmit, o
     let calculatedScore = 0;
     test.questions.forEach(q => {
       const selectedId = answers[q.id];
+      // For now, simple matching of choice ID. 
+      // More complex types (essay, matching) would need robust grading logic in a backend.
       const correctChoice = q.choices.find(c => c.isCorrect);
       if (correctChoice && correctChoice.id === selectedId) {
         calculatedScore++;
@@ -103,7 +105,11 @@ export const TakeTest: React.FC<TakeTestProps> = ({ test, studentId, onSubmit, o
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6 flex justify-between items-center sticky top-0 z-10">
         <div>
           <h2 className="font-bold text-gray-800">{test.title}</h2>
-          <div className="text-xs text-gray-500 mt-1">سؤال {currentQIndex + 1} من {test.questions.length}</div>
+          <div className="flex gap-2 text-xs text-gray-500 mt-1">
+             <span className="bg-gray-100 px-2 py-0.5 rounded">{test.subject}</span>
+             <span>•</span>
+             <span>سؤال {currentQIndex + 1} من {test.questions.length}</span>
+          </div>
         </div>
         <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono font-bold ${timeLeft < 60 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-blue-50 text-blue-700'}`}>
           <Timer size={20} />
@@ -118,31 +124,43 @@ export const TakeTest: React.FC<TakeTestProps> = ({ test, studentId, onSubmit, o
 
       {/* Question Card */}
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 flex-1 flex flex-col">
+        <div className="flex justify-between items-center mb-6">
+            <span className="text-xs font-bold text-primary-600 bg-primary-50 px-2 py-1 rounded">{currentQuestion.type}</span>
+        </div>
+
         <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-8 leading-relaxed">
           {currentQuestion.text}
         </h3>
 
         <div className="space-y-3 flex-1">
-          {currentQuestion.choices.map((choice) => (
-            <button
-              key={choice.id}
-              onClick={() => handleSelect(choice.id)}
-              className={`w-full text-right p-4 rounded-xl border-2 transition-all duration-200 ${
-                answers[currentQuestion.id] === choice.id
-                  ? 'border-primary-500 bg-primary-50 text-primary-800'
-                  : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                  answers[currentQuestion.id] === choice.id ? 'border-primary-500' : 'border-gray-300'
-                }`}>
-                  {answers[currentQuestion.id] === choice.id && <div className="w-3 h-3 bg-primary-500 rounded-full" />}
+          {currentQuestion.choices.length > 0 ? (
+            currentQuestion.choices.map((choice) => (
+              <button
+                key={choice.id}
+                onClick={() => handleSelect(choice.id)}
+                className={`w-full text-right p-4 rounded-xl border-2 transition-all duration-200 ${
+                  answers[currentQuestion.id] === choice.id
+                    ? 'border-primary-500 bg-primary-50 text-primary-800'
+                    : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    answers[currentQuestion.id] === choice.id ? 'border-primary-500' : 'border-gray-300'
+                  }`}>
+                    {answers[currentQuestion.id] === choice.id && <div className="w-3 h-3 bg-primary-500 rounded-full" />}
+                  </div>
+                  {choice.text}
                 </div>
-                {choice.text}
-              </div>
-            </button>
-          ))}
+              </button>
+            ))
+          ) : (
+            <div className="p-6 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-500">
+               <AlertCircle className="mx-auto mb-2 opacity-50" />
+               <p>هذا النوع من الأسئلة ({currentQuestion.type}) يتطلب إجابة نصية أو تفاعلية لم يتم تفعيلها في هذا الإصدار التجريبي.</p>
+               <p className="text-xs mt-2">يرجى اختيار الإجابة الافتراضية للمتابعة.</p>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-100">
