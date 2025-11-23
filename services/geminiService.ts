@@ -1,10 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Question } from "../types";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Ensure the API key is treated as a string to avoid TS errors
+const apiKey = process.env.API_KEY as string;
+const genAI = new GoogleGenAI({ apiKey });
 
 export const generateQuestionsWithAI = async (topic: string, count: number = 5): Promise<Question[]> => {
   try {
+    if (!apiKey) {
+      throw new Error("API Key is missing. Please configure the environment variable.");
+    }
+
     const prompt = `
       Create ${count} multiple choice questions about "${topic}" in Arabic.
       Focus on educational value suitable for high school students.
@@ -58,6 +64,6 @@ export const generateQuestionsWithAI = async (topic: string, count: number = 5):
 
   } catch (error) {
     console.error("Gemini AI Error:", error);
-    throw new Error("فشل في توليد الأسئلة. يرجى المحاولة مرة أخرى.");
+    throw new Error("فشل في توليد الأسئلة. يرجى التأكد من مفتاح API والمحاولة مرة أخرى.");
   }
 };

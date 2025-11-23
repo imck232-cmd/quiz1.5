@@ -32,7 +32,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               </div>
               
               <a 
-                href="https://wa.me/967778080412"
+                href="https://wa.me/967780804012"
                 target="_blank"
                 rel="noopener noreferrer" 
                 className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition-colors w-full sm:w-auto shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 duration-200"
@@ -40,7 +40,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <WhatsAppIcon />
                 <div className="flex flex-col items-start text-sm">
                   <span>للتواصل عبر الواتس</span>
-                  <span dir="ltr" className="font-mono font-bold">967 778 080 412</span>
+                  <span dir="ltr" className="font-mono font-bold">967 780 804 012</span>
                 </div>
               </a>
             </div>
