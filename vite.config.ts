@@ -10,7 +10,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       // Safely expose API_KEY to the client-side code
-      'process.env.API_KEY': JSON.stringify(env.API_KEY)
+      // Default to empty string if undefined to prevent JSON.stringify(undefined) which results in 'undefined' in code
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || '')
     },
     build: {
       // Increase the warning limit slightly to avoid false positives on medium-sized chunks
